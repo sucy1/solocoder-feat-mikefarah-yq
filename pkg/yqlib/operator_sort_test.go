@@ -173,6 +173,72 @@ var sortByOperatorScenarios = []expressionScenario{
 	},
 }
 
+func TestSortByWithMissingFieldsLast(t *testing.T) {
+	originalPrefs := ConfiguredSortByPreferences
+	ConfiguredSortByPreferences = sortByPreferences{MissingFieldsLast: true}
+	defer func() { ConfiguredSortByPreferences = originalPrefs }()
+
+	scenarios := []expressionScenario{
+		{
+			description: "Sort by with missing field last",
+			document:    "[{a: cat},{a: banana},{b: dog}]",
+			expression:  `sort_by(.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{a: banana}, {a: cat}, {b: dog}]\n",
+			},
+		},
+		{
+			description: "Sort by with all missing fields",
+			document:    "[{b: 1},{b: 2},{b: 3}]",
+			expression:  `sort_by(.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{b: 1}, {b: 2}, {b: 3}]\n",
+			},
+		},
+		{
+			description: "Sort by with nested path and missing field last",
+			document:    "[{x: {a: 3}},{x: {a: 1}},{y: 1}]",
+			expression:  `sort_by(.x.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{x: {a: 1}}, {x: {a: 3}}, {y: 1}]\n",
+			},
+		},
+	}
+
+	for _, tt := range scenarios {
+		testScenario(t, &tt)
+	}
+}
+
+func TestSortByWithReverse(t *testing.T) {
+	originalPrefs := ConfiguredSortByPreferences
+	ConfiguredSortByPreferences = sortByPreferences{MissingFieldsLast: true, Reverse: true}
+	defer func() { ConfiguredSortByPreferences = originalPrefs }()
+
+	scenarios := []expressionScenario{
+		{
+			description: "Sort by reverse with missing field last",
+			document:    "[{a: cat},{a: banana},{b: dog}]",
+			expression:  `sort_by(.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{a: cat}, {a: banana}, {b: dog}]\n",
+			},
+		},
+		{
+			description: "Sort by reverse with all missing fields",
+			document:    "[{b: 1},{b: 2},{b: 3}]",
+			expression:  `sort_by(.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{b: 1}, {b: 2}, {b: 3}]\n",
+			},
+		},
+	}
+
+	for _, tt := range scenarios {
+		testScenario(t, &tt)
+	}
+}
+
 func TestSortByOperatorScenarios(t *testing.T) {
 	for _, tt := range sortByOperatorScenarios {
 		testScenario(t, &tt)

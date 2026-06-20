@@ -216,6 +216,37 @@ yq -P -oy sample.json
 	rootCmd.PersistentFlags().BoolVarP(&yqlib.ConfiguredSecurityPreferences.DisableFileOps, "security-disable-file-ops", "", false, "Disable file related operations (e.g. load)")
 	rootCmd.PersistentFlags().BoolVarP(&yqlib.ConfiguredSecurityPreferences.EnableSystemOps, "security-enable-system-operator", "", false, "Enable system operator to allow execution of external commands.")
 
+	rootCmd.PersistentFlags().StringVar(&sortByField, "sort-by", "", "sort arrays/maps by the given field path. Missing fields sort last. Supports dot-notation for nested fields (e.g. 'a.b.c').")
+	if err = rootCmd.RegisterFlagCompletionFunc("sort-by", cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
+	rootCmd.PersistentFlags().StringVar(&sortByReverseField, "sort-by-reverse", "", "sort arrays/maps by the given field path in reverse order. Missing fields sort last. Supports dot-notation for nested fields (e.g. 'a.b.c').")
+	if err = rootCmd.RegisterFlagCompletionFunc("sort-by-reverse", cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
+
+	rootCmd.PersistentFlags().BoolVar(&toYaml, "to-yaml", false, "shorthand for -o yaml")
+	rootCmd.PersistentFlags().BoolVar(&fromYaml, "from-yaml", false, "shorthand for -p yaml")
+	rootCmd.PersistentFlags().BoolVar(&toJson, "to-json", false, "shorthand for -o json")
+	rootCmd.PersistentFlags().BoolVar(&fromJson, "from-json", false, "shorthand for -p json")
+	rootCmd.PersistentFlags().BoolVar(&toXml, "to-xml", false, "shorthand for -o xml")
+	rootCmd.PersistentFlags().BoolVar(&fromXml, "from-xml", false, "shorthand for -p xml")
+	rootCmd.PersistentFlags().BoolVar(&toToml, "to-toml", false, "shorthand for -o toml")
+	rootCmd.PersistentFlags().BoolVar(&fromToml, "from-toml", false, "shorthand for -p toml")
+
+	rootCmd.PersistentFlags().BoolVar(&mergeAll, "merge-all", false, "merge all input files together. Objects merge by key (later overwrites earlier), arrays merge by index.")
+	rootCmd.PersistentFlags().StringVar(&mergeStrategy, "merge-strategy", "overwrite", "merge strategy when using --merge-all: 'overwrite' (later overwrites earlier) or 'append' (arrays are concatenated).")
+	if err = rootCmd.RegisterFlagCompletionFunc("merge-strategy", cobra.FixedCompletions([]string{"overwrite", "append"}, cobra.ShellCompDirectiveNoFileComp)); err != nil {
+		panic(err)
+	}
+
+	rootCmd.PersistentFlags().BoolVar(&noBackup, "no-backup", false, "disable automatic .bak backup when using --inplace/-i.")
+
+	rootCmd.PersistentFlags().StringVar(&typeGuard, "type-guard", "", "check that the value at the given path matches the given type (e.g. '.path type'). Exits with code 3 on mismatch. Supported types: string, int, float, bool, array, object, null.")
+	if err = rootCmd.RegisterFlagCompletionFunc("type-guard", cobra.NoFileCompletions); err != nil {
+		panic(err)
+	}
+
 	rootCmd.AddCommand(
 		createEvaluateSequenceCommand(),
 		createEvaluateAllCommand(),

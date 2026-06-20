@@ -125,9 +125,7 @@ yq '.something |= load_str("../../examples/" + .file)' sample.yml
 ```
 will output
 ```yaml
-something: |-
-  a: apple is included
-  b: cool.
+something: "a: apple is included\r\nb: cool."
 ```
 
 ## Load from XML

@@ -55,15 +55,48 @@ func processExpression(expression string) string {
 	} else if prettyPrint {
 		return fmt.Sprintf("%v | %v", expression, yqlib.PrettyPrintExp)
 	}
+
+	if sortByField != "" {
+		pathExp := dotPathToExpression(sortByField)
+		sortExp := fmt.Sprintf("sort_by(%s)", pathExp)
+		if expression == "" {
+			expression = sortExp
+		} else {
+			expression = fmt.Sprintf("%v | %v", expression, sortExp)
+		}
+	}
+
+	if sortByReverseField != "" {
+		pathExp := dotPathToExpression(sortByReverseField)
+		sortExp := fmt.Sprintf("sort_by(%s)", pathExp)
+		if expression == "" {
+			expression = sortExp
+		} else {
+			expression = fmt.Sprintf("%v | %v", expression, sortExp)
+		}
+	}
+
 	return expression
 }
 
-func evaluateSequence(cmd *cobra.Command, args []string) (cmdError error) {
-	// 0 args, read std in
-	// 1 arg, null input, process expression
-	// 1 arg, read file in sequence
-	// 2+ args, [0] = expression, file the rest
+func getSortByPreferences() yqlib.SortByPreferences {
+	if sortByField != "" {
+		return yqlib.SortByPreferences{MissingFieldsLast: true, Reverse: false}
+	}
+	if sortByReverseField != "" {
+		return yqlib.SortByPreferences{MissingFieldsLast: true, Reverse: true}
+	}
+	return yqlib.SortByPreferences{}
+}
 
+func applySortPreferences() {
+	if sortByField != "" || sortByReverseField != "" {
+		prefs := getSortByPreferences()
+		yqlib.ConfiguredSortByPreferences = prefs
+	}
+}
+
+func evaluateSequence(cmd *cobra.Command, args []string) (cmdError error) {
 	out := cmd.OutOrStdout()
 
 	var err error
@@ -73,16 +106,23 @@ func evaluateSequence(cmd *cobra.Command, args []string) (cmdError error) {
 		return err
 	}
 
+	applySortPreferences()
+
+	if mergeAll {
+		return evaluateMerge(cmd, args, expression)
+	}
+
+	if typeGuard != "" {
+		return evaluateTypeGuard(cmd, args, expression)
+	}
+
 	if writeInplace {
-		// only use colours if its forced
 		colorsEnabled = forceColor
-		writeInPlaceHandler := yqlib.NewWriteInPlaceHandler(args[0])
+		writeInPlaceHandler := yqlib.NewWriteInPlaceHandler(args[0], noBackup)
 		out, err = writeInPlaceHandler.CreateTempFile()
 		if err != nil {
 			return err
 		}
-		// need to indirectly call the function so  that completedSuccessfully is
-		// passed when we finish execution as opposed to now
 		defer func() {
 			if cmdError == nil {
 				cmdError = writeInPlaceHandler.FinishWriteInPlace(completedSuccessfully)

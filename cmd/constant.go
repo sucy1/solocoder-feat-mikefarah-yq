@@ -37,3 +37,22 @@ var completedSuccessfully = false
 var forceExpression = ""
 
 var expressionFile = ""
+
+var sortByField = ""
+var sortByReverseField = ""
+
+var toYaml = false
+var fromYaml = false
+var toJson = false
+var fromJson = false
+var toXml = false
+var fromXml = false
+var toToml = false
+var fromToml = false
+
+var mergeAll = false
+var mergeStrategy = "overwrite"
+
+var noBackup = false
+
+var typeGuard = ""

@@ -18,7 +18,7 @@ func TestWriteInPlaceHandlerImpl_CreateTempFile(t *testing.T) {
 		t.Fatalf("Failed to create input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(inputFile)
+	handler := NewWriteInPlaceHandler(inputFile, false)
 	tempFile, err := handler.CreateTempFile()
 
 	if err != nil {
@@ -36,7 +36,7 @@ func TestWriteInPlaceHandlerImpl_CreateTempFile(t *testing.T) {
 
 func TestWriteInPlaceHandlerImpl_CreateTempFile_NonExistentInput(t *testing.T) {
 	// Test with non-existent input file
-	handler := NewWriteInPlaceHandler("/non/existent/file.yaml")
+	handler := NewWriteInPlaceHandler("/non/existent/file.yaml", false)
 	tempFile, err := handler.CreateTempFile()
 
 	if err == nil {
@@ -61,7 +61,7 @@ func TestWriteInPlaceHandlerImpl_FinishWriteInPlace_Success(t *testing.T) {
 		t.Fatalf("Failed to create input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(inputFile)
+	handler := NewWriteInPlaceHandler(inputFile, false)
 	tempFile, err := handler.CreateTempFile()
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %v", err)
@@ -106,7 +106,7 @@ func TestWriteInPlaceHandlerImpl_FinishWriteInPlace_Failure(t *testing.T) {
 		t.Fatalf("Failed to create input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(inputFile)
+	handler := NewWriteInPlaceHandler(inputFile, false)
 	tempFile, err := handler.CreateTempFile()
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %v", err)
@@ -157,7 +157,7 @@ func TestWriteInPlaceHandlerImpl_FinishWriteInPlace_Symlink_Success(t *testing.T
 		t.Fatalf("Failed to symlink to input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(symlinkFile)
+	handler := NewWriteInPlaceHandler(symlinkFile, false)
 	tempFile, err := handler.CreateTempFile()
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %v", err)
@@ -211,7 +211,7 @@ func TestWriteInPlaceHandlerImpl_CreateTempFile_Permissions(t *testing.T) {
 		t.Fatalf("Failed to create input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(inputFile)
+	handler := NewWriteInPlaceHandler(inputFile, false)
 	tempFile, err := handler.CreateTempFile()
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %v", err)
@@ -247,7 +247,7 @@ func TestWriteInPlaceHandlerImpl_Integration(t *testing.T) {
 		t.Fatalf("Failed to create input file: %v", err)
 	}
 
-	handler := NewWriteInPlaceHandler(inputFile)
+	handler := NewWriteInPlaceHandler(inputFile, false)
 
 	// Create temp file
 	tempFile, err := handler.CreateTempFile()

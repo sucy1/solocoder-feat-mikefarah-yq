@@ -42,35 +42,3 @@ will output
 Error: system operations are disabled, use --security-enable-system-operator to enable
 ```
 
-## Run a command with an argument
-Use `--security-enable-system-operator` to enable the system operator.
-
-Given a sample.yml file of:
-```yaml
-country: Australia
-```
-then
-```bash
-yq --security-enable-system-operator '.country = system("/bin/echo"; "test")' sample.yml
-```
-will output
-```yaml
-country: test
-```
-
-## Run a command without arguments
-Omit the semicolon and args to run the command with no extra arguments.
-
-Given a sample.yml file of:
-```yaml
-a: hello
-```
-then
-```bash
-yq --security-enable-system-operator '.a = system("/bin/echo")' sample.yml
-```
-will output
-```yaml
-a: ""
-```
-

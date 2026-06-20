@@ -9,17 +9,46 @@ import (
 	"time"
 )
 
+type sortByPreferences struct {
+	MissingFieldsLast bool
+	Reverse           bool
+}
+
+type SortByPreferences = sortByPreferences
+
+var ConfiguredSortByPreferences = sortByPreferences{}
+
+func ApplySortByPreferences(node *ExpressionNode, prefs sortByPreferences) {
+	if node == nil {
+		return
+	}
+	if node.Operation != nil && node.Operation.OperationType == sortByOpType {
+		node.Operation.Preferences = prefs
+	}
+	ApplySortByPreferences(node.LHS, prefs)
+	ApplySortByPreferences(node.RHS, prefs)
+}
+
 func sortOperator(d *dataTreeNavigator, context Context, expressionNode *ExpressionNode) (Context, error) {
 	selfExpression := &ExpressionNode{Operation: &Operation{OperationType: selfReferenceOpType}}
 	expressionNode.RHS = selfExpression
 	return sortByOperator(d, context, expressionNode)
 }
 
-// context represents the current matching nodes in the expression pipeline
-// expressionNode is your current expression (sort_by)
 func sortByOperator(d *dataTreeNavigator, context Context, expressionNode *ExpressionNode) (Context, error) {
 
 	results := list.New()
+
+	prefs := sortByPreferences{}
+	if expressionNode.Operation.Preferences != nil {
+		prefs = expressionNode.Operation.Preferences.(sortByPreferences)
+	}
+	if ConfiguredSortByPreferences.MissingFieldsLast {
+		prefs.MissingFieldsLast = true
+	}
+	if ConfiguredSortByPreferences.Reverse {
+		prefs.Reverse = true
+	}
 
 	for el := context.MatchingNodes.Front(); el != nil; el = el.Next() {
 		candidate := el.Value.(*CandidateNode)
@@ -33,7 +62,7 @@ func sortByOperator(d *dataTreeNavigator, context Context, expressionNode *Expre
 				if err != nil {
 					return err
 				}
-				sortableNode := sortableNode{Node: valueNode, CompareContext: compareContext, dateTimeLayout: context.GetDateTimeLayout()}
+				sortableNode := sortableNode{Node: valueNode, CompareContext: compareContext, dateTimeLayout: context.GetDateTimeLayout(), prefs: prefs}
 				sortableArray = append(sortableArray, sortableNode)
 				return nil
 			}
@@ -58,7 +87,6 @@ func sortByOperator(d *dataTreeNavigator, context Context, expressionNode *Expre
 			}
 		}
 
-		// convert array of value nodes back to map
 		results.PushBack(sortedList)
 	}
 	return context.ChildContext(results), nil
@@ -68,6 +96,7 @@ type sortableNode struct {
 	Node           *CandidateNode
 	CompareContext Context
 	dateTimeLayout string
+	prefs          sortByPreferences
 }
 
 type sortableNodeArray []sortableNode
@@ -79,23 +108,45 @@ func (a sortableNodeArray) Less(i, j int) bool {
 	lhsContext := a[i].CompareContext
 	rhsContext := a[j].CompareContext
 
+	lhsMissing := lhsContext.MatchingNodes.Len() == 0
+	rhsMissing := rhsContext.MatchingNodes.Len() == 0
+
+	if lhsMissing && rhsMissing {
+		return false
+	}
+	if lhsMissing {
+		return !a[i].prefs.MissingFieldsLast
+	}
+	if rhsMissing {
+		return a[i].prefs.MissingFieldsLast
+	}
+
 	rhsEl := rhsContext.MatchingNodes.Front()
 
+	var result int
 	for lhsEl := lhsContext.MatchingNodes.Front(); lhsEl != nil && rhsEl != nil; lhsEl = lhsEl.Next() {
 		lhs := lhsEl.Value.(*CandidateNode)
 		rhs := rhsEl.Value.(*CandidateNode)
 
-		result := a.compare(lhs, rhs, a[i].dateTimeLayout)
+		result = a.compare(lhs, rhs, a[i].dateTimeLayout)
 
 		if result < 0 {
-			return true
+			break
 		} else if result > 0 {
-			return false
+			break
 		}
 
 		rhsEl = rhsEl.Next()
 	}
-	return lhsContext.MatchingNodes.Len() < rhsContext.MatchingNodes.Len()
+
+	if result == 0 {
+		result = lhsContext.MatchingNodes.Len() - rhsContext.MatchingNodes.Len()
+	}
+
+	if a[i].prefs.Reverse {
+		return result > 0
+	}
+	return result < 0
 }
 
 func (a sortableNodeArray) compare(lhs *CandidateNode, rhs *CandidateNode, dateTimeLayout string) int {

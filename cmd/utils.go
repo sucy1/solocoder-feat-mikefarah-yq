@@ -64,9 +64,32 @@ func loadSplitFileExpression() error {
 }
 
 func handleBackwardsCompatibility() {
-	// backwards compatibility
 	if outputToJSON {
 		outputFormat = "json"
+	}
+	if toYaml {
+		outputFormat = "yaml"
+	}
+	if toJson {
+		outputFormat = "json"
+	}
+	if toXml {
+		outputFormat = "xml"
+	}
+	if toToml {
+		outputFormat = "toml"
+	}
+	if fromYaml {
+		inputFormat = "yaml"
+	}
+	if fromJson {
+		inputFormat = "json"
+	}
+	if fromXml {
+		inputFormat = "xml"
+	}
+	if fromToml {
+		inputFormat = "toml"
 	}
 }
 
@@ -87,7 +110,27 @@ func validateCommandFlags(args []string) error {
 		return fmt.Errorf("cannot pass files in when using null-input flag")
 	}
 
+	if sortByField != "" && sortByReverseField != "" {
+		return fmt.Errorf("cannot use both --sort-by and --sort-by-reverse flags together")
+	}
+
+	if mergeStrategy != "overwrite" && mergeStrategy != "append" {
+		return fmt.Errorf("invalid merge strategy '%v', must be 'overwrite' or 'append'", mergeStrategy)
+	}
+
+	if mergeAll && len(args) < 2 && !hasStdin() {
+		return fmt.Errorf("--merge-all requires at least two input files")
+	}
+
 	return nil
+}
+
+func hasStdin() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return stat != nil && (stat.Mode()&os.ModeCharDevice) == 0
 }
 
 func configureFormats(args []string) error {
@@ -157,6 +200,16 @@ func configureUnwrapScalar() {
 	if unwrapScalarFlag.IsExplicitlySet() {
 		unwrapScalar = unwrapScalarFlag.IsSet()
 	}
+}
+
+func dotPathToExpression(path string) string {
+	if path == "" {
+		return "."
+	}
+	if !strings.HasPrefix(path, ".") {
+		path = "." + path
+	}
+	return path
 }
 
 func configureDecoder(evaluateTogether bool) (yqlib.Decoder, error) {

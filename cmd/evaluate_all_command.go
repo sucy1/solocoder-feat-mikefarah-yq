@@ -62,7 +62,7 @@ func evaluateAll(cmd *cobra.Command, args []string) (cmdError error) {
 	if writeInplace {
 		// only use colours if its forced
 		colorsEnabled = forceColor
-		writeInPlaceHandler := yqlib.NewWriteInPlaceHandler(args[0])
+		writeInPlaceHandler := yqlib.NewWriteInPlaceHandler(args[0], noBackup)
 		out, err = writeInPlaceHandler.CreateTempFile()
 		if err != nil {
 			return err
