@@ -64,7 +64,7 @@ func evaluateMerge(cmd *cobra.Command, args []string, expression string) error {
 func buildMergeExpression(expression string) string {
 	var mergeExp string
 	if mergeStrategy == "append" {
-		mergeExp = ". as $item ireduce ([]; . + $item)"
+		mergeExp = ". as $item ireduce ([]; . + $item) | unique"
 	} else {
 		mergeExp = ". as $item ireduce ({}; . * $item)"
 	}

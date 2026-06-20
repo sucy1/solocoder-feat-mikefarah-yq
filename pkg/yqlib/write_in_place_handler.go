@@ -1,6 +1,9 @@
 package yqlib
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"os"
 )
 
@@ -14,11 +17,12 @@ type writeInPlaceHandlerImpl struct {
 	tempFile      *os.File
 	noBackup      bool
 	backupFile    string
+	backupSum     string
 }
 
 func NewWriteInPlaceHandler(inputFile string, noBackup bool) writeInPlaceHandler {
 
-	return &writeInPlaceHandlerImpl{inputFile, nil, noBackup, ""}
+	return &writeInPlaceHandlerImpl{inputFile, nil, noBackup, "", ""}
 }
 
 func (w *writeInPlaceHandlerImpl) CreateTempFile() (*os.File, error) {
@@ -54,12 +58,14 @@ func (w *writeInPlaceHandlerImpl) createBackup() error {
 	if err != nil {
 		return err
 	}
+	hash := sha256.Sum256(data)
+	w.backupSum = hex.EncodeToString(hash[:])
 	err = os.WriteFile(backupPath, data, 0600)
 	if err != nil {
 		return err
 	}
 	w.backupFile = backupPath
-	log.Debugf("WriteInPlaceHandler: created backup at %v", backupPath)
+	log.Debugf("WriteInPlaceHandler: created backup at %v (sha256: %v)", backupPath, w.backupSum[:16])
 	return nil
 }
 
@@ -98,6 +104,14 @@ func (w *writeInPlaceHandlerImpl) restoreBackup() error {
 	data, err := os.ReadFile(w.backupFile)
 	if err != nil {
 		return err
+	}
+	if w.backupSum != "" {
+		hash := sha256.Sum256(data)
+		actualSum := hex.EncodeToString(hash[:])
+		if actualSum != w.backupSum {
+			return fmt.Errorf("backup file integrity check failed: expected sha256 %v but got %v", w.backupSum[:16], actualSum[:16])
+		}
+		log.Debugf("WriteInPlaceHandler: backup integrity verified (sha256: %v)", actualSum[:16])
 	}
 	return os.WriteFile(w.inputFilename, data, 0600)
 }

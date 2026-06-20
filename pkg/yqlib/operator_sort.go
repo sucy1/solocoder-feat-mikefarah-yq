@@ -111,6 +111,13 @@ func (a sortableNodeArray) Less(i, j int) bool {
 	lhsMissing := lhsContext.MatchingNodes.Len() == 0
 	rhsMissing := rhsContext.MatchingNodes.Len() == 0
 
+	if !lhsMissing && isAllNull(lhsContext) {
+		lhsMissing = true
+	}
+	if !rhsMissing && isAllNull(rhsContext) {
+		rhsMissing = true
+	}
+
 	if lhsMissing && rhsMissing {
 		return false
 	}
@@ -147,6 +154,20 @@ func (a sortableNodeArray) Less(i, j int) bool {
 		return result > 0
 	}
 	return result < 0
+}
+
+func isAllNull(context Context) bool {
+	for el := context.MatchingNodes.Front(); el != nil; el = el.Next() {
+		node := el.Value.(*CandidateNode)
+		tag := node.Tag
+		if !strings.HasPrefix(tag, "!!") {
+			tag = node.guessTagFromCustomType()
+		}
+		if tag != "!!null" {
+			return false
+		}
+	}
+	return context.MatchingNodes.Len() > 0
 }
 
 func (a sortableNodeArray) compare(lhs *CandidateNode, rhs *CandidateNode, dateTimeLayout string) int {
@@ -211,21 +232,21 @@ func (a sortableNodeArray) compare(lhs *CandidateNode, rhs *CandidateNode, dateT
 	} else if lhsTag == "!!int" && rhsTag == "!!int" {
 		_, lhsNum, err := parseInt64(lhs.Value)
 		if err != nil {
-			panic(err)
+			return strings.Compare(lhs.Value, rhs.Value)
 		}
 		_, rhsNum, err := parseInt64(rhs.Value)
 		if err != nil {
-			panic(err)
+			return strings.Compare(lhs.Value, rhs.Value)
 		}
 		return int(lhsNum - rhsNum)
 	} else if (lhsTag == "!!int" || lhsTag == "!!float") && (rhsTag == "!!int" || rhsTag == "!!float") {
 		lhsNum, err := strconv.ParseFloat(lhs.Value, 64)
 		if err != nil {
-			panic(err)
+			return strings.Compare(lhs.Value, rhs.Value)
 		}
 		rhsNum, err := strconv.ParseFloat(rhs.Value, 64)
 		if err != nil {
-			panic(err)
+			return strings.Compare(lhs.Value, rhs.Value)
 		}
 		if lhsNum == rhsNum {
 			return 0

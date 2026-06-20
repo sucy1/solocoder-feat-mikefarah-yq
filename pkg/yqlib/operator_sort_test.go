@@ -203,6 +203,30 @@ func TestSortByWithMissingFieldsLast(t *testing.T) {
 				"D0, P[], (!!seq)::[{x: {a: 1}}, {x: {a: 3}}, {y: 1}]\n",
 			},
 		},
+		{
+			description: "Sort by with null intermediate node sorted last",
+			document:    "[{x: {y: 1}},{x: null},{x: {y: 2}},{x: {y: 0}}]",
+			expression:  `sort_by(.x.y)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{x: {y: 0}}, {x: {y: 1}}, {x: {y: 2}}, {x: null}]\n",
+			},
+		},
+		{
+			description: "Sort by with deep nested null intermediate node",
+			document:    "[{a: {b: {c: 3}}},{a: null},{a: {b: {c: 1}}}]",
+			expression:  `sort_by(.a.b.c)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{a: {b: {c: 1}}}, {a: {b: {c: 3}}}, {a: null}]\n",
+			},
+		},
+		{
+			description: "Sort by with null value sorted last",
+			document:    "[{a: 2},{a: null},{a: 1}]",
+			expression:  `sort_by(.a)`,
+			expected: []string{
+				"D0, P[], (!!seq)::[{a: 1}, {a: 2}, {a: null}]\n",
+			},
+		},
 	}
 
 	for _, tt := range scenarios {

@@ -236,11 +236,9 @@ func TestWriteInPlaceHandlerImpl_CreateTempFile_Permissions(t *testing.T) {
 }
 
 func TestWriteInPlaceHandlerImpl_Integration(t *testing.T) {
-	// Create a temporary directory and file for testing
 	tempDir := t.TempDir()
 	inputFile := filepath.Join(tempDir, "integration_test.yaml")
 
-	// Create input file with some content
 	originalContent := []byte("original: content\n")
 	err := os.WriteFile(inputFile, originalContent, 0600)
 	if err != nil {
@@ -249,13 +247,11 @@ func TestWriteInPlaceHandlerImpl_Integration(t *testing.T) {
 
 	handler := NewWriteInPlaceHandler(inputFile, false)
 
-	// Create temp file
 	tempFile, err := handler.CreateTempFile()
 	if err != nil {
 		t.Fatalf("CreateTempFile failed: %v", err)
 	}
 
-	// Write new content to temp file
 	newContent := []byte("new: content\n")
 	_, err = tempFile.Write(newContent)
 	if err != nil {
@@ -263,13 +259,11 @@ func TestWriteInPlaceHandlerImpl_Integration(t *testing.T) {
 	}
 	tempFile.Close()
 
-	// Finish with success
 	err = handler.FinishWriteInPlace(true)
 	if err != nil {
 		t.Fatalf("FinishWriteInPlace failed: %v", err)
 	}
 
-	// Verify the file was updated
 	finalContent, err := os.ReadFile(inputFile)
 	if err != nil {
 		t.Fatalf("Failed to read final file: %v", err)
@@ -278,5 +272,114 @@ func TestWriteInPlaceHandlerImpl_Integration(t *testing.T) {
 	if string(finalContent) != string(newContent) {
 		t.Errorf("File not updated correctly. Expected %q, got %q",
 			string(newContent), string(finalContent))
+	}
+}
+
+func TestWriteInPlaceHandlerImpl_BackupIntegrity(t *testing.T) {
+	tempDir := t.TempDir()
+	inputFile := filepath.Join(tempDir, "backup_test.yaml")
+
+	originalContent := []byte("original: content\n")
+	err := os.WriteFile(inputFile, originalContent, 0600)
+	if err != nil {
+		t.Fatalf("Failed to create input file: %v", err)
+	}
+
+	handler := NewWriteInPlaceHandler(inputFile, false)
+	handlerImpl := handler.(*writeInPlaceHandlerImpl)
+
+	tempFile, err := handler.CreateTempFile()
+	if err != nil {
+		t.Fatalf("CreateTempFile failed: %v", err)
+	}
+	tempFile.Close()
+
+	err = handlerImpl.createBackup()
+	if err != nil {
+		t.Fatalf("createBackup failed: %v", err)
+	}
+
+	if handlerImpl.backupSum == "" {
+		t.Fatal("Expected backupSum to be set after createBackup")
+	}
+
+	backupPath := inputFile + ".bak"
+	backupData, err := os.ReadFile(backupPath)
+	if err != nil {
+		t.Fatalf("Failed to read backup file: %v", err)
+	}
+	if string(backupData) != string(originalContent) {
+		t.Errorf("Backup content mismatch. Expected %q, got %q",
+			string(originalContent), string(backupData))
+	}
+
+	err = handlerImpl.restoreBackup()
+	if err != nil {
+		t.Fatalf("restoreBackup failed: %v", err)
+	}
+}
+
+func TestWriteInPlaceHandlerImpl_BackupIntegrityTampered(t *testing.T) {
+	tempDir := t.TempDir()
+	inputFile := filepath.Join(tempDir, "tampered_test.yaml")
+
+	originalContent := []byte("original: content\n")
+	err := os.WriteFile(inputFile, originalContent, 0600)
+	if err != nil {
+		t.Fatalf("Failed to create input file: %v", err)
+	}
+
+	handler := NewWriteInPlaceHandler(inputFile, false)
+	handlerImpl := handler.(*writeInPlaceHandlerImpl)
+
+	tempFile, err := handler.CreateTempFile()
+	if err != nil {
+		t.Fatalf("CreateTempFile failed: %v", err)
+	}
+	tempFile.Close()
+
+	err = handlerImpl.createBackup()
+	if err != nil {
+		t.Fatalf("createBackup failed: %v", err)
+	}
+
+	backupPath := inputFile + ".bak"
+	err = os.WriteFile(backupPath, []byte("tampered content\n"), 0600)
+	if err != nil {
+		t.Fatalf("Failed to tamper backup file: %v", err)
+	}
+
+	err = handlerImpl.restoreBackup()
+	if err == nil {
+		t.Fatal("Expected error when restoring tampered backup, got nil")
+	}
+}
+
+func TestWriteInPlaceHandlerImpl_NoBackup(t *testing.T) {
+	tempDir := t.TempDir()
+	inputFile := filepath.Join(tempDir, "nobackup_test.yaml")
+
+	originalContent := []byte("original: content\n")
+	err := os.WriteFile(inputFile, originalContent, 0600)
+	if err != nil {
+		t.Fatalf("Failed to create input file: %v", err)
+	}
+
+	handler := NewWriteInPlaceHandler(inputFile, true)
+
+	tempFile, err := handler.CreateTempFile()
+	if err != nil {
+		t.Fatalf("CreateTempFile failed: %v", err)
+	}
+	tempFile.Close()
+
+	err = handler.FinishWriteInPlace(true)
+	if err != nil {
+		t.Fatalf("FinishWriteInPlace failed: %v", err)
+	}
+
+	backupPath := inputFile + ".bak"
+	if _, err := os.Stat(backupPath); !os.IsNotExist(err) {
+		t.Error("Expected no backup file to be created with noBackup=true")
 	}
 }
